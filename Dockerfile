@@ -59,7 +59,9 @@ EXPOSE 80
 
 # Configure environment fallback configurations, run migrations, and execute Apache
 CMD export LOG_CHANNEL=stderr && \
-    export APP_DEBUG=true && \
+    export APP_DEBUG=false && \
+    export APP_ENV=production && \
+    export APP_URL=https://rhu-sanmiguel-com.onrender.com && \
     export DB_CONNECTION=sqlite && \
     export DB_DATABASE=/var/www/html/database/database.sqlite && \
     php artisan config:clear && \
