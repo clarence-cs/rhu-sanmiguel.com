@@ -26,21 +26,34 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory to standard Apache root
 WORKDIR /var/www/html
 
-# CRUCIAL: Copy the CONTENTS of your subfolder straight into the main directory
+# Copy the CONTENTS of your subfolder straight into the main directory
 COPY rhu-sanmiguel.com/ .
+
+# Ensure an .env file exists so production configurations don't crash
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
 # Install PHP dependencies at the root level
 RUN composer install --no-dev --optimize-autoloader --no-scripts
+
+# Create necessary Laravel framework directories that might be missing from gitignore
+RUN mkdir -p storage/framework/cache/data \
+             storage/framework/sessions \
+             storage/framework/views \
+             storage/logs
 
 # Create the SQLite database precisely where the environment expects it
 RUN mkdir -p /var/www/html/storage/database && \
     touch /var/www/html/storage/database/database.sqlite
 
-# Fix folder permissions for Apache
-RUN chown -R www-data:www-data /var/www/html
+# Give completely open permissions to storage and cache so Apache can read/write without ownership restrictions
+RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Expose web port
 EXPOSE 80
 
-# Run migrations and start Apache normally
-CMD php artisan migrate --force && apache2-foreground
+# Clean old cache files, generate an APP_KEY if missing, run migrations, and start Apache
+CMD php artisan config:clear && \
+    php artisan view:clear && \
+    php artisan key:generate --no-interaction && \
+    php artisan migrate --force && \
+    apache2-foreground
