@@ -1,16 +1,19 @@
 FROM php:8.4-apache
 
-# Install system dependencies & PHP extensions needed for Laravel/SQLite
+# Install system dependencies, Node.js, and SQLite extensions
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
+    libsqlite3-dev \
     zip \
     unzip \
     git \
     curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql
+    && docker-php-ext-install gd pdo pdo_sqlite
 
 # Point Apache's root directly to the public folder
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
@@ -23,36 +26,43 @@ RUN a2enmod rewrite
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory to standard Apache root
+# Set working directory
 WORKDIR /var/www/html
 
-# Copy the CONTENTS of your subfolder straight into the main directory
-COPY rhu-sanmiguel.com/ .
+# Copy repository layout
+COPY . .
 
-# Ensure an .env file exists so production configurations don't crash
+# Ensure an .env file exists so configurations don't crash
 RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
-# Install PHP dependencies at the root level
+# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Create necessary Laravel framework directories that might be missing from gitignore
+# Install NPM dependencies and build your frontend assets
+RUN npm install && npm run build
+
+# Create framework folders that may be missing from your layout
 RUN mkdir -p storage/framework/cache/data \
              storage/framework/sessions \
              storage/framework/views \
-             storage/logs
+             storage/logs \
+             database
 
-# Create the SQLite database precisely where the environment expects it
-RUN mkdir -p /var/www/html/storage/database && \
-    touch /var/www/html/storage/database/database.sqlite
+# Create the SQLite database precisely where your config file expects it
+RUN touch /var/www/html/database/database.sqlite
 
-# Give completely open permissions to storage and cache so Apache can read/write without ownership restrictions
-RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
+# Open permissions completely so Apache and SQLite can write to both directories
+RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
 # Expose web port
 EXPOSE 80
 
-# Clean old cache files, generate an APP_KEY if missing, run migrations, and start Apache
-CMD php artisan config:clear && \
+# Configure environment fallback configurations, run migrations, and execute Apache
+CMD export LOG_CHANNEL=stderr && \
+    export APP_DEBUG=true && \
+    export DB_CONNECTION=sqlite && \
+    export DB_DATABASE=/var/www/html/database/database.sqlite && \
+    php artisan config:clear && \
     php artisan view:clear && \
     php artisan key:generate --no-interaction && \
     php artisan migrate --force && \
