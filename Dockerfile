@@ -12,8 +12,8 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo pdo_mysql
 
-# Point Apache's DocumentRoot to Laravel's public folder
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+# Explicitly point Apache to your nested public folder
+ENV APACHE_DOCUMENT_ROOT /var/www/html/rhu-sanmiguel.com/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
@@ -23,24 +23,25 @@ RUN a2enmod rewrite
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
+# Set working directory to the actual Laravel folder
 WORKDIR /var/www/html
 
-# Copy project files
+# Copy all project files
 COPY . .
 
-# Install PHP dependencies
+# Install PHP dependencies inside the nested subfolder
+WORKDIR /var/www/html/rhu-sanmiguel.com
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Set correct permissions for Laravel storage and cache
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Set correct permissions for the nested storage and cache
+RUN chown -R www-data:www-data /var/www/html/rhu-sanmiguel.com/storage /var/www/html/rhu-sanmiguel.com/bootstrap/cache
 
 # Expose web port
 EXPOSE 80
 
-# Run migrations and start Apache
-CMD mkdir -p /var/www/html/storage/database && \
-    touch /var/www/html/storage/database/database.sqlite && \
-    chown -R www-data:www-data /var/www/html/storage/database && \
+# Run migrations and start Apache from the nested folder perspective
+CMD mkdir -p /var/www/html/rhu-sanmiguel.com/storage/database && \
+    touch /var/www/html/rhu-sanmiguel.com/storage/database/database.sqlite && \
+    chown -R www-data:www-data /var/www/html/rhu-sanmiguel.com/storage/database && \
     php artisan migrate --force && \
     apache2-foreground
