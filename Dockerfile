@@ -58,10 +58,13 @@ RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/ht
 EXPOSE 80
 
 # Configure environment fallback configurations, run migrations, and execute Apache
+# Configure environment fallback configurations, run migrations, and execute Apache
 CMD export LOG_CHANNEL=stderr && \
     export APP_DEBUG=false && \
     export APP_ENV=production && \
     export APP_URL=https://rhu-sanmiguel-com.onrender.com && \
+    export ASSET_URL=https://rhu-sanmiguel-com.onrender.com && \
+    export LARAVEL_FORCE_HTTPS=true && \
     export DB_CONNECTION=sqlite && \
     export DB_DATABASE=/var/www/html/database/database.sqlite && \
     php artisan config:clear && \
