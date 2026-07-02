@@ -55,11 +55,12 @@ EXPOSE 80
 
 # Configure environment fallback configurations, run migrations, and execute Apache
 # Configure environment fallback configurations, run migrations, and execute Apache
+# Configure environment fallback configurations, run migrations, and execute Apache
 CMD export LOG_CHANNEL=stderr && \
     export APP_DEBUG=false && \
     export APP_ENV=production && \
-    export LARAVEL_FORCE_HTTPS=true && \
     php artisan config:clear && \
     php artisan view:clear && \
+    php artisan storage:link --force && \
     php artisan migrate --force && \
     apache2-foreground
