@@ -1,11 +1,11 @@
 FROM php:8.4-apache
 
-# Install system dependencies, Node.js, and PostgreSQL extensions
+# Install system dependencies, Node.js, and SQLite extensions
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
-    libpq-dev \
+    libsqlite3-dev \
     zip \
     unzip \
     git \
@@ -13,13 +13,7 @@ RUN apt-get update && apt-get install -y \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_pgsql
-
-# Inject production configurations permanently so Apache and PHP can see them
-ENV APP_ENV=production
-ENV APP_DEBUG=false
-ENV LOG_CHANNEL=stderr
-ENV LARAVEL_FORCE_HTTPS=true
+    && docker-php-ext-install gd pdo pdo_sqlite
 
 # Point Apache's root directly to the public folder
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
@@ -51,17 +45,30 @@ RUN npm install && npm run build
 RUN mkdir -p storage/framework/cache/data \
              storage/framework/sessions \
              storage/framework/views \
-             storage/logs
+             storage/logs \
+             database
 
-# Grant open permissions so Apache can read your assets, compiled styles, and storage
-RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public
+# Create the SQLite database precisely where your config file expects it
+RUN touch /var/www/html/database/database.sqlite
+
+# Open permissions completely so Apache and SQLite can write to both directories
+RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
 # Expose web port
 EXPOSE 80
 
-# Run remaining deployment optimizations and start Apache
-CMD php artisan config:clear && \
+# Configure environment fallback configurations, run migrations, and execute Apache
+# Configure environment fallback configurations, run migrations, and execute Apache
+CMD export LOG_CHANNEL=stderr && \
+    export APP_DEBUG=false && \
+    export APP_ENV=production && \
+    export APP_URL=https://rhu-sanmiguel-com.onrender.com && \
+    export ASSET_URL=https://rhu-sanmiguel-com.onrender.com && \
+    export LARAVEL_FORCE_HTTPS=true && \
+    export DB_CONNECTION=sqlite && \
+    export DB_DATABASE=/var/www/html/database/database.sqlite && \
+    php artisan config:clear && \
     php artisan view:clear && \
-    php artisan storage:link --force && \
+    php artisan key:generate --no-interaction && \
     php artisan migrate --force && \
     apache2-foreground
