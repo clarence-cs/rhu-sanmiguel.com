@@ -1,11 +1,11 @@
 FROM php:8.4-apache
 
-# Install system dependencies, Node.js, and SQLite extensions
+# Install system dependencies, Node.js, and PostgreSQL extensions
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
-    libsqlite3-dev \
+    libpq-dev \
     zip \
     unzip \
     git \
@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_sqlite
+    && docker-php-ext-install gd pdo pdo_pgsql
 
 # Point Apache's root directly to the public folder
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
@@ -45,19 +45,14 @@ RUN npm install && npm run build
 RUN mkdir -p storage/framework/cache/data \
              storage/framework/sessions \
              storage/framework/views \
-             storage/logs \
-             database
+             storage/logs
 
-# Create the SQLite database precisely where your config file expects it
-RUN touch /var/www/html/database/database.sqlite
-
-# Open permissions completely so Apache and SQLite can write to both directories
-RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+# Open permissions completely so Apache can write to storage elements
+RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Expose web port
 EXPOSE 80
 
-# Configure environment fallback configurations, run migrations, and execute Apache
 # Configure environment fallback configurations, run migrations, and execute Apache
 CMD export LOG_CHANNEL=stderr && \
     export APP_DEBUG=false && \
@@ -65,8 +60,6 @@ CMD export LOG_CHANNEL=stderr && \
     export APP_URL=https://rhu-sanmiguel-com.onrender.com && \
     export ASSET_URL=https://rhu-sanmiguel-com.onrender.com && \
     export LARAVEL_FORCE_HTTPS=true && \
-    export DB_CONNECTION=sqlite && \
-    export DB_DATABASE=/var/www/html/database/database.sqlite && \
     php artisan config:clear && \
     php artisan view:clear && \
     php artisan key:generate --no-interaction && \
