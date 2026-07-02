@@ -15,6 +15,12 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo pdo_pgsql
 
+# Inject production configurations permanently so Apache and PHP can see them
+ENV APP_ENV=production
+ENV APP_DEBUG=false
+ENV LOG_CHANNEL=stderr
+ENV LARAVEL_FORCE_HTTPS=true
+
 # Point Apache's root directly to the public folder
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/*.conf
@@ -47,19 +53,14 @@ RUN mkdir -p storage/framework/cache/data \
              storage/framework/views \
              storage/logs
 
-# Open permissions completely so Apache can write to storage elements
-RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
+# Grant open permissions so Apache can read your assets, compiled styles, and storage
+RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/public
 
 # Expose web port
 EXPOSE 80
 
-# Configure environment fallback configurations, run migrations, and execute Apache
-# Configure environment fallback configurations, run migrations, and execute Apache
-# Configure environment fallback configurations, run migrations, and execute Apache
-CMD export LOG_CHANNEL=stderr && \
-    export APP_DEBUG=false && \
-    export APP_ENV=production && \
-    php artisan config:clear && \
+# Run remaining deployment optimizations and start Apache
+CMD php artisan config:clear && \
     php artisan view:clear && \
     php artisan storage:link --force && \
     php artisan migrate --force && \
