@@ -55,6 +55,8 @@ RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
 EXPOSE 80
 
 # Configure production variables, flush configurations, migrate and seed database, start Apache
+# Configure production variables, flush configurations, migrate and seed database, start Apache
+# Configure production variables, flush configurations, migrate and seed database, start Apache
 CMD export LOG_CHANNEL=stderr && \
     export APP_DEBUG=false && \
     export APP_ENV=production && \
@@ -65,5 +67,5 @@ CMD export LOG_CHANNEL=stderr && \
     php artisan view:clear && \
     php artisan key:generate --no-interaction && \
     php artisan migrate:fresh --force && \
-    php artisan db:seed --class=PatientCsvSeeder && \
+    php artisan db:seed --class=PatientCsvSeeder --force && \
     apache2-foreground
