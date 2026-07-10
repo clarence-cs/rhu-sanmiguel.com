@@ -65,4 +65,5 @@ CMD export LOG_CHANNEL=stderr && \
     php artisan view:clear && \
     php artisan key:generate --no-interaction && \
     php artisan migrate:fresh --force && \
+    php artisan db:seed --class=PatientCsvSeeder && \
     apache2-foreground
