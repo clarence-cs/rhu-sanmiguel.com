@@ -64,5 +64,5 @@ CMD export LOG_CHANNEL=stderr && \
     php artisan config:clear && \
     php artisan view:clear && \
     php artisan key:generate --no-interaction && \
-    php artisan migrate:fresh --seed --force && \
+    php artisan migrate:fresh --force && \
     apache2-foreground
